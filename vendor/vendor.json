@@ -354,6 +354,11 @@
 			"revisionTime": "2015-08-01T08:52:21+10:00"
 		},
 		{
+			"path": "github.com/golang/mock/gomock",
+			"revision": "bd3c8e81be01eef76d4b503f5e687d2d1354d2d9",
+			"revisionTime": "2016-01-21T12:51:14-06:00"
+		},
+		{
 			"path": "github.com/golang/protobuf/jsonpb",
 			"revision": "5fc2294e655b78ed8a02082d37808d46c17d7e64",
 			"revisionTime": "2016-01-21T14:29:00+11:00"
