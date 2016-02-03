@@ -1,6 +1,7 @@
 package fuse_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -13,6 +14,21 @@ import (
 	pfuse "github.com/pachyderm/pachyderm/src/pfs/fuse"
 	"go.pedge.io/pb/go/google/protobuf"
 )
+
+// panicOnFail is a gomock TestReporter that panics instead of calling
+// t.Fatal. This lets the FUSE serve loop handle the panic, instead of
+// t.FailNow calling runtime.Goexit, as that loses the response and
+// causes a hang.
+type panicOnFail struct {
+	testing.TB
+}
+
+var _ gomock.TestReporter = panicOnFail{}
+
+func (p panicOnFail) Fatalf(format string, args ...interface{}) {
+	p.Errorf(format, args...)
+	panic(fmt.Errorf(format, args...))
+}
 
 func TestMount(t *testing.T) {
 	t.Parallel()
@@ -35,7 +51,7 @@ func TestMount(t *testing.T) {
 func TestRootReadDir(t *testing.T) {
 	t.Parallel()
 
-	ctrl := gomock.NewController(t)
+	ctrl := gomock.NewController(panicOnFail{t})
 	defer ctrl.Finish()
 
 	client := mock_pfs.NewMockAPIClient(ctrl)
