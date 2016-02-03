@@ -247,3 +247,169 @@ func TestRepoReadDir(t *testing.T) {
 	// 	t.Errorf("wrong mtime: %v != %v", g, e)
 	// }
 }
+
+func TestCommitReadDir(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(panicOnFail{t})
+	defer ctrl.Finish()
+
+	client := mock_pfs.NewMockAPIClient(ctrl)
+
+	const (
+		repoName = "foo"
+		repoSize = 42
+	)
+	repoModTime := time.Date(2016, 1, 2, 13, 14, 15, 123456789, time.UTC)
+
+	client.EXPECT().InspectRepo(gomock.Any(), gomock.Eq(&pfs.InspectRepoRequest{
+		Repo: &pfs.Repo{Name: repoName},
+	})).Return(
+		&pfs.RepoInfo{
+			Repo: &pfs.Repo{
+				Name: repoName,
+			},
+			Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+			SizeBytes: repoSize,
+		},
+		error(nil),
+	)
+
+	const (
+		commitID   = "blargh"
+		commitSize = 13
+	)
+	commitStartTime := time.Date(2016, 1, 2, 13, 14, 2, 234567890, time.UTC)
+	commitFinishTime := time.Date(2016, 1, 2, 13, 14, 7, 345678901, time.UTC)
+
+	client.EXPECT().InspectCommit(gomock.Any(), gomock.Eq(&pfs.InspectCommitRequest{
+		Commit: &pfs.Commit{
+			Repo: &pfs.Repo{
+				Name: repoName,
+			},
+			Id: commitID,
+		},
+	})).Return(
+		&pfs.CommitInfo{
+			Commit: &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: repoName,
+				},
+				Id: commitID,
+			},
+			CommitType:   pfs.CommitType_COMMIT_TYPE_READ,
+			ParentCommit: nil,
+			Started:      &google_protobuf.Timestamp{commitStartTime.Unix(), int32(commitStartTime.Nanosecond())},
+			Finished:     &google_protobuf.Timestamp{commitFinishTime.Unix(), int32(commitFinishTime.Nanosecond())},
+			SizeBytes:    repoSize,
+		},
+		error(nil),
+	)
+
+	const (
+		filePath = "bar"
+		fileSize = 34
+		filePerm = 0640
+	)
+	fileModTime := time.Date(2016, 1, 2, 13, 14, 7, 345678901, time.UTC)
+
+	client.EXPECT().ListFile(gomock.Any(), gomock.Eq(&pfs.ListFileRequest{
+		File: &pfs.File{
+			Commit: &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: repoName,
+				},
+				Id: commitID,
+			},
+			Path: "",
+		},
+		Shard: &pfs.Shard{},
+	})).Return(
+		&pfs.FileInfos{
+			FileInfo: []*pfs.FileInfo{
+				{
+					File: &pfs.File{
+						Commit: &pfs.Commit{
+							Repo: &pfs.Repo{
+								Name: repoName,
+							},
+							Id: commitID,
+						},
+						Path: filePath,
+					},
+					FileType:  pfs.FileType_FILE_TYPE_REGULAR,
+					SizeBytes: fileSize,
+					Perm:      filePerm,
+					Modified:  &google_protobuf.Timestamp{fileModTime.Unix(), int32(fileModTime.Nanosecond())},
+					Children:  nil,
+				},
+			},
+		},
+		error(nil),
+	)
+
+	client.EXPECT().InspectFile(gomock.Any(), gomock.Eq(&pfs.InspectFileRequest{
+		File: &pfs.File{
+			Commit: &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: repoName,
+				},
+				Id: commitID,
+			},
+			Path: filePath,
+		},
+		Shard: &pfs.Shard{},
+	})).Return(
+		&pfs.FileInfo{
+			File: &pfs.File{
+				Commit: &pfs.Commit{
+					Repo: &pfs.Repo{
+						Name: repoName,
+					},
+					Id: commitID,
+				},
+				Path: filePath,
+			},
+			FileType:  pfs.FileType_FILE_TYPE_REGULAR,
+			SizeBytes: fileSize,
+			Perm:      filePerm,
+			Modified:  &google_protobuf.Timestamp{fileModTime.Unix(), int32(fileModTime.Nanosecond())},
+			Children:  nil,
+		},
+		error(nil),
+	).MinTimes(1).MaxTimes(2)
+	// TODO why is InspectFile called twice
+
+	shard := &pfs.Shard{}
+	commitMounts := []*pfuse.CommitMount{}
+	filesys := pfuse.NewFilesystem(client, shard, commitMounts)
+
+	mnt, err := fstestutil.MountedT(t, filesys, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mnt.Close()
+
+	fis, err := ioutil.ReadDir(filepath.Join(mnt.Dir, repoName, commitID))
+	if err != nil {
+		t.Fatalf("readdir: %v", err)
+	}
+	if len(fis) != 1 {
+		t.Fatalf("expected one file: %v", fis)
+	}
+	fi := fis[0]
+	if g, e := fi.Name(), filePath; g != e {
+		t.Errorf("wrong name: %q != %q", g, e)
+	}
+	if g, e := fi.Size(), int64(fileSize); g != e {
+		t.Errorf("wrong size: %v != %v", g, e)
+	}
+	// TODO respect filePerm
+	// if g, e := fi.Mode(), os.FileMode(filePerm); g != e {
+	// 	t.Errorf("wrong mode: %v != %v", g, e)
+	// }
+	// TODO show fiieModTime as mtime
+	// if g, e := fi.ModTime().UTC(), fileModTime; g != e {
+	// 	t.Errorf("wrong mtime: %v != %v", g, e)
+	// }
+}
