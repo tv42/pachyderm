@@ -413,3 +413,141 @@ func TestCommitReadDir(t *testing.T) {
 	// 	t.Errorf("wrong mtime: %v != %v", g, e)
 	// }
 }
+
+func TestFileRead(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(panicOnFail{t})
+	defer ctrl.Finish()
+
+	client := mock_pfs.NewMockAPIClient(ctrl)
+
+	const (
+		repoName = "foo"
+		repoSize = 42
+	)
+	repoModTime := time.Date(2016, 1, 2, 13, 14, 15, 123456789, time.UTC)
+
+	client.EXPECT().InspectRepo(gomock.Any(), gomock.Eq(&pfs.InspectRepoRequest{
+		Repo: &pfs.Repo{Name: repoName},
+	})).Return(
+		&pfs.RepoInfo{
+			Repo: &pfs.Repo{
+				Name: repoName,
+			},
+			Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+			SizeBytes: repoSize,
+		},
+		error(nil),
+	)
+
+	const (
+		commitID   = "blargh"
+		commitSize = 13
+	)
+	commitStartTime := time.Date(2016, 1, 2, 13, 14, 2, 234567890, time.UTC)
+	commitFinishTime := time.Date(2016, 1, 2, 13, 14, 7, 345678901, time.UTC)
+
+	client.EXPECT().InspectCommit(gomock.Any(), gomock.Eq(&pfs.InspectCommitRequest{
+		Commit: &pfs.Commit{
+			Repo: &pfs.Repo{
+				Name: repoName,
+			},
+			Id: commitID,
+		},
+	})).Return(
+		&pfs.CommitInfo{
+			Commit: &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: repoName,
+				},
+				Id: commitID,
+			},
+			CommitType:   pfs.CommitType_COMMIT_TYPE_READ,
+			ParentCommit: nil,
+			Started:      &google_protobuf.Timestamp{commitStartTime.Unix(), int32(commitStartTime.Nanosecond())},
+			Finished:     &google_protobuf.Timestamp{commitFinishTime.Unix(), int32(commitFinishTime.Nanosecond())},
+			SizeBytes:    repoSize,
+		},
+		error(nil),
+	)
+
+	const (
+		filePath    = "bar"
+		fileContent = "hello, world\n"
+		fileSize    = uint64(len(fileContent))
+		filePerm    = 0640
+	)
+	fileModTime := time.Date(2016, 1, 2, 13, 14, 7, 345678901, time.UTC)
+
+	client.EXPECT().InspectFile(gomock.Any(), gomock.Eq(&pfs.InspectFileRequest{
+		File: &pfs.File{
+			Commit: &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: repoName,
+				},
+				Id: commitID,
+			},
+			Path: filePath,
+		},
+		Shard: &pfs.Shard{},
+	})).Return(
+		&pfs.FileInfo{
+			File: &pfs.File{
+				Commit: &pfs.Commit{
+					Repo: &pfs.Repo{
+						Name: repoName,
+					},
+					Id: commitID,
+				},
+				Path: filePath,
+			},
+			FileType:  pfs.FileType_FILE_TYPE_REGULAR,
+			SizeBytes: fileSize,
+			Perm:      filePerm,
+			Modified:  &google_protobuf.Timestamp{fileModTime.Unix(), int32(fileModTime.Nanosecond())},
+			Children:  nil,
+		},
+		error(nil),
+	).MinTimes(1).MaxTimes(3)
+	// TODO why is InspectFile called three times
+
+	client.EXPECT().GetFile(gomock.Any(), gomock.Eq(&pfs.GetFileRequest{
+		File: &pfs.File{
+			Commit: &pfs.Commit{
+				Repo: &pfs.Repo{
+					Name: repoName,
+				},
+				Id: commitID,
+			},
+			Path: filePath,
+		},
+		OffsetBytes: 0,
+		// TODO this might be too platform-specific
+		SizeBytes: 4096,
+		Shard:     &pfs.Shard{},
+	})).Return(
+		&getFileClient{
+			data: []byte(fileContent),
+		},
+		error(nil),
+	)
+
+	shard := &pfs.Shard{}
+	commitMounts := []*pfuse.CommitMount{}
+	filesys := pfuse.NewFilesystem(client, shard, commitMounts)
+
+	mnt, err := fstestutil.MountedT(t, filesys, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mnt.Close()
+
+	buf, err := ioutil.ReadFile(filepath.Join(mnt.Dir, repoName, commitID, filePath))
+	if err != nil {
+		t.Fatalf("readfile: %v", err)
+	}
+	if g, e := string(buf), fileContent; g != e {
+		t.Errorf("wrong file content: %q != %q", g, e)
+	}
+}
