@@ -13,6 +13,11 @@
 			"revisionTime": "2016-01-08T15:59:59-08:00"
 		},
 		{
+			"path": "bazil.org/fuse/fs/fstestutil",
+			"revision": "1bab7acc918a3316e302d2ef44e225374e840aa1",
+			"revisionTime": "2016-01-25T11:43:34-08:00"
+		},
+		{
 			"path": "bazil.org/fuse/fuseutil",
 			"revision": "2345f52f9d579e93916093ea4f19e29a79dd5050",
 			"revisionTime": "2016-01-08T15:59:59-08:00"
