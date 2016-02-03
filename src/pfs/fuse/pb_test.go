@@ -2,6 +2,7 @@ package fuse_test
 
 import (
 	"io"
+	"time"
 
 	"github.com/pachyderm/pachyderm/src/pfs"
 	"go.pedge.io/pb/go/google/protobuf"
@@ -10,6 +11,14 @@ import (
 )
 
 // Helpers for mocking grpc APIs in tests
+
+// PBTimestamp converts a time into protobuf format.
+func PBTimestamp(t time.Time) *google_protobuf.Timestamp {
+	return &google_protobuf.Timestamp{
+		Seconds: t.Unix(),
+		Nanos:   int32(t.Nanosecond()),
+	}
+}
 
 // getFileClient is a mock streaming result from
 // pfs.APIClient.GetFile.

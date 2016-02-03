@@ -13,7 +13,6 @@ import (
 	"github.com/pachyderm/pachyderm/src/internal/mock_pfs"
 	"github.com/pachyderm/pachyderm/src/pfs"
 	pfuse "github.com/pachyderm/pachyderm/src/pfs/fuse"
-	"go.pedge.io/pb/go/google/protobuf"
 )
 
 // panicOnFail is a gomock TestReporter that panics instead of calling
@@ -70,7 +69,7 @@ func TestRootReadDir(t *testing.T) {
 					Repo: &pfs.Repo{
 						Name: repoName,
 					},
-					Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+					Created:   PBTimestamp(repoModTime),
 					SizeBytes: repoSize,
 				},
 			},
@@ -87,7 +86,7 @@ func TestRootReadDir(t *testing.T) {
 			Repo: &pfs.Repo{
 				Name: repoName,
 			},
-			Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+			Created:   PBTimestamp(repoModTime),
 			SizeBytes: repoSize,
 		},
 		error(nil),
@@ -148,7 +147,7 @@ func TestRepoReadDir(t *testing.T) {
 			Repo: &pfs.Repo{
 				Name: repoName,
 			},
-			Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+			Created:   PBTimestamp(repoModTime),
 			SizeBytes: repoSize,
 		},
 		error(nil),
@@ -180,8 +179,8 @@ func TestRepoReadDir(t *testing.T) {
 					},
 					CommitType:   pfs.CommitType_COMMIT_TYPE_READ,
 					ParentCommit: nil,
-					Started:      &google_protobuf.Timestamp{commitStartTime.Unix(), int32(commitStartTime.Nanosecond())},
-					Finished:     &google_protobuf.Timestamp{commitFinishTime.Unix(), int32(commitFinishTime.Nanosecond())},
+					Started:      PBTimestamp(commitStartTime),
+					Finished:     PBTimestamp(commitFinishTime),
 					SizeBytes:    repoSize,
 				},
 			},
@@ -206,8 +205,8 @@ func TestRepoReadDir(t *testing.T) {
 			},
 			CommitType:   pfs.CommitType_COMMIT_TYPE_READ,
 			ParentCommit: nil,
-			Started:      &google_protobuf.Timestamp{commitStartTime.Unix(), int32(commitStartTime.Nanosecond())},
-			Finished:     &google_protobuf.Timestamp{commitFinishTime.Unix(), int32(commitFinishTime.Nanosecond())},
+			Started:      PBTimestamp(commitStartTime),
+			Finished:     PBTimestamp(commitFinishTime),
 			SizeBytes:    repoSize,
 		},
 		error(nil),
@@ -269,7 +268,7 @@ func TestCommitReadDir(t *testing.T) {
 			Repo: &pfs.Repo{
 				Name: repoName,
 			},
-			Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+			Created:   PBTimestamp(repoModTime),
 			SizeBytes: repoSize,
 		},
 		error(nil),
@@ -299,8 +298,8 @@ func TestCommitReadDir(t *testing.T) {
 			},
 			CommitType:   pfs.CommitType_COMMIT_TYPE_READ,
 			ParentCommit: nil,
-			Started:      &google_protobuf.Timestamp{commitStartTime.Unix(), int32(commitStartTime.Nanosecond())},
-			Finished:     &google_protobuf.Timestamp{commitFinishTime.Unix(), int32(commitFinishTime.Nanosecond())},
+			Started:      PBTimestamp(commitStartTime),
+			Finished:     PBTimestamp(commitFinishTime),
 			SizeBytes:    repoSize,
 		},
 		error(nil),
@@ -340,7 +339,7 @@ func TestCommitReadDir(t *testing.T) {
 					FileType:  pfs.FileType_FILE_TYPE_REGULAR,
 					SizeBytes: fileSize,
 					Perm:      filePerm,
-					Modified:  &google_protobuf.Timestamp{fileModTime.Unix(), int32(fileModTime.Nanosecond())},
+					Modified:  PBTimestamp(fileModTime),
 					Children:  nil,
 				},
 			},
@@ -373,7 +372,7 @@ func TestCommitReadDir(t *testing.T) {
 			FileType:  pfs.FileType_FILE_TYPE_REGULAR,
 			SizeBytes: fileSize,
 			Perm:      filePerm,
-			Modified:  &google_protobuf.Timestamp{fileModTime.Unix(), int32(fileModTime.Nanosecond())},
+			Modified:  PBTimestamp(fileModTime),
 			Children:  nil,
 		},
 		error(nil),
@@ -435,7 +434,7 @@ func TestFileRead(t *testing.T) {
 			Repo: &pfs.Repo{
 				Name: repoName,
 			},
-			Created:   &google_protobuf.Timestamp{repoModTime.Unix(), int32(repoModTime.Nanosecond())},
+			Created:   PBTimestamp(repoModTime),
 			SizeBytes: repoSize,
 		},
 		error(nil),
@@ -465,8 +464,8 @@ func TestFileRead(t *testing.T) {
 			},
 			CommitType:   pfs.CommitType_COMMIT_TYPE_READ,
 			ParentCommit: nil,
-			Started:      &google_protobuf.Timestamp{commitStartTime.Unix(), int32(commitStartTime.Nanosecond())},
-			Finished:     &google_protobuf.Timestamp{commitFinishTime.Unix(), int32(commitFinishTime.Nanosecond())},
+			Started:      PBTimestamp(commitStartTime),
+			Finished:     PBTimestamp(commitFinishTime),
 			SizeBytes:    repoSize,
 		},
 		error(nil),
@@ -505,7 +504,7 @@ func TestFileRead(t *testing.T) {
 			FileType:  pfs.FileType_FILE_TYPE_REGULAR,
 			SizeBytes: fileSize,
 			Perm:      filePerm,
-			Modified:  &google_protobuf.Timestamp{fileModTime.Unix(), int32(fileModTime.Nanosecond())},
+			Modified:  PBTimestamp(fileModTime),
 			Children:  nil,
 		},
 		error(nil),
